@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revisa — assistente de revisão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap" rel="stylesheet">
+<style>
+/* ---------- TOKENS ---------- */
+:root{
+  --tinta:#16202E;
+  --tinta-fraca:#5A6779;
+  --papel:#EDEFF2;
+  --superficie:#FFFFFF;
+  --caneta:#2B4EA2;
+  --caneta-clara:#E4EAF7;
+  --marcatexto:#FFE24B;
+  --borda:#D6DBE3;
+  --raio:14px;
+  --sans:"Familjen Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Literata",Georgia,"Times New Roman",serif;
+}
+/* Tema escuro do visualizador: mantém a identidade, troca só as superfícies */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --tinta:#EEF1F6; --tinta-fraca:#9AA6B8; --papel:#121822;
+    --superficie:#1B2331; --caneta:#8FADEF; --caneta-clara:#26324A; --borda:#2E3949;
+  }
+}
+:root[data-theme="dark"]{
+  --tinta:#EEF1F6; --tinta-fraca:#9AA6B8; --papel:#121822;
+  --superficie:#1B2331; --caneta:#8FADEF; --caneta-clara:#26324A; --borda:#2E3949;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--papel); color:var(--tinta);
+  font-family:var(--serif); font-size:16px; line-height:1.55;
+  display:flex; justify-content:center; padding:20px 16px 32px;
+}
+.app{width:100%; max-width:720px}
+
+/* ---------- CABEÇALHO ---------- */
+.topo{display:flex; align-items:center; gap:12px; margin-bottom:6px}
+.marca{
+  width:38px;height:38px;border-radius:10px;background:var(--caneta);
+  display:grid;place-items:center;flex:none;
+}
+.marca span{
+  /* Traço de marca-texto usado como logotipo */
+  display:block;width:19px;height:7px;background:var(--marcatexto);
+  transform:skewX(-14deg);
+}
+.topo h1{font-family:var(--sans);font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em}
+.topo p{font-family:var(--sans);font-size:13px;color:var(--tinta-fraca);margin:0}
+.aviso{
+  font-family:var(--sans);font-size:12.5px;color:var(--tinta-fraca);
+  border-left:3px solid var(--marcatexto); padding:6px 0 6px 10px; margin:14px 0 12px;
+}
+
+/* ---------- JANELA DO CHAT ---------- */
+.chat{
+  background:var(--superficie); border:1px solid var(--borda); border-radius:var(--raio);
+  height:min(62vh,520px); overflow-y:auto; padding:18px; display:flex;
+  flex-direction:column; gap:14px; scroll-behavior:smooth;
+}
+.linha{display:flex; gap:10px; max-width:88%}
+.linha.eu{align-self:flex-end; flex-direction:row-reverse}
+.avatar{
+  width:28px;height:28px;border-radius:8px;flex:none;
+  display:grid;place-items:center;font-family:var(--sans);font-size:12px;font-weight:600;
+  background:var(--caneta-clara); color:var(--caneta);
+}
+.linha.eu .avatar{background:var(--papel); color:var(--tinta-fraca)}
+.balao{
+  padding:10px 14px; border-radius:12px; background:var(--papel);
+  font-size:15px; border-top-left-radius:4px;
+}
+.linha.eu .balao{background:var(--caneta); color:#fff; border-top-left-radius:12px; border-top-right-radius:4px}
+.balao p{margin:0 0 8px} .balao p:last-child{margin:0}
+.balao strong{font-weight:500}
+
+/* Indicador de digitação */
+.digitando{display:flex;gap:4px;padding:14px}
+.digitando i{width:6px;height:6px;border-radius:50%;background:var(--tinta-fraca);animation:pulsa 1.1s infinite}
+.digitando i:nth-child(2){animation-delay:.18s} .digitando i:nth-child(3){animation-delay:.36s}
+@keyframes pulsa{0%,60%,100%{opacity:.25} 30%{opacity:1}}
+
+/* ---------- CARTÃO DO PLANO ---------- */
+.plano{
+  border:1px solid var(--borda); border-radius:12px; overflow:hidden;
+  background:var(--superficie); margin-top:10px; font-family:var(--sans);
+}
+.plano h4{margin:0;padding:10px 14px;font-size:13px;font-weight:600;background:var(--caneta-clara);color:var(--caneta)}
+.plano table{width:100%; border-collapse:collapse; font-size:13.5px}
+.plano td{padding:9px 14px; border-top:1px solid var(--borda); vertical-align:top}
+.plano td:first-child{font-weight:600; white-space:nowrap; width:1%}
+.plano td:last-child{color:var(--tinta-fraca)}
+
+/* ---------- BOTÕES DE RESPOSTA PRONTA ---------- */
+.opcoes{
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;
+  /* Reserva espaço para não "pular" o layout ao trocar de nó */
+  min-height:44px; align-items:flex-start;
+}
+.opcoes button{
+  font-family:var(--sans); font-size:14px; font-weight:500; cursor:pointer;
+  background:var(--superficie); color:var(--caneta);
+  border:1.5px solid var(--caneta); border-radius:999px; padding:9px 16px;
+  transition:background .15s ease, color .15s ease;
+}
+.opcoes button:hover{background:var(--caneta); color:#fff}
+.opcoes button:focus-visible{outline:3px solid var(--marcatexto); outline-offset:2px}
+.opcoes button.reiniciar{border-color:var(--borda); color:var(--tinta-fraca)}
+.opcoes button.reiniciar:hover{background:var(--papel); color:var(--tinta)}
+.rotulo-opcoes{
+  font-family:var(--sans); font-size:12px; color:var(--tinta-fraca);
+  margin:16px 0 0; border-top:1px solid var(--borda); padding-top:14px;
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important; scroll-behavior:auto !important; transition:none !important}
+}
+@media (max-width:480px){
+  .linha{max-width:96%} .chat{height:58vh; padding:14px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topo">
+    <div class="marca"><span></span></div>
+    <div>
+      <h1>Revisa</h1>
+      <p>Seus tópicos viram um plano de estudo</p>
+    </div>
+  </header>
+
+  <p class="aviso">
+    Protótipo de demonstração. As respostas são roteirizadas para mostrar o fluxo de uso —
+    nenhum modelo de IA é chamado nesta página.
+  </p>
+
+  <main class="chat" id="chat" aria-live="polite" aria-label="Conversa com o Revisa"></main>
+
+  <p class="rotulo-opcoes">Escolha o que dizer:</p>
+  <div class="opcoes" id="opcoes"></div>
+
+</div>
+
+<script>
+/* =========================================================================
+   ROTEIRO DA CONVERSA
+   Cada nó tem: falas do assistente (bot) e as opções de resposta do aluno.
+   "vai" aponta para o próximo nó — é isso que dá o efeito de conversa real.
+   ========================================================================= */
+const ROTEIRO = {
+
+  inicio:{
+    bot:[
+      "Oi! Eu sou o Revisa. Me diz o que você precisa estudar e eu monto um plano de revisão dividido nos dias que você tem.",
+      "Por onde a gente começa?"
+    ],
+    opcoes:[
+      {texto:"Tenho prova de Estatística em 5 dias", vai:"prova"},
+      {texto:"Não sei por onde começar", vai:"perdido"},
+      {texto:"Quero revisar algo que já estudei", vai:"revisao"}
+    ]
+  },
+
+  prova:{
+    bot:["Cinco dias dá tempo. Quais conteúdos caem na prova?"],
+    opcoes:[
+      {texto:"Distribuição de frequências, probabilidade e amostragem", vai:"tempo"},
+      {texto:"Tenho o PDF do professor, mas não li ainda", vai:"pdf"}
+    ]
+  },
+
+  pdf:{
+    bot:[
+      "Sem problema. Me manda os títulos dos capítulos ou cola o sumário aqui — eu separo o que é base do que é aprofundamento.",
+      "No protótipo, vamos assumir os três tópicos mais comuns dessa disciplina."
+    ],
+    opcoes:[{texto:"Pode seguir com esses tópicos", vai:"tempo"}]
+  },
+
+  perdido:{
+    bot:[
+      "Normal. Quando tudo parece urgente, a gente trava.",
+      "Vamos por eliminação: qual matéria tem a avaliação mais próxima? Começamos por ela e depois encaixamos o resto."
+    ],
+    opcoes:[
+      {texto:"Estatística, é semana que vem", vai:"prova"},
+      {texto:"Nenhuma prova marcada, quero manter em dia", vai:"revisao"}
+    ]
+  },
+
+  revisao:{
+    bot:[
+      "Revisão sem prova marcada funciona melhor em intervalos crescentes: você revê hoje, em 3 dias, em 7 e em 15.",
+      "Me diz o assunto e eu marco esses retornos no plano."
+    ],
+    opcoes:[
+      {texto:"Probabilidade condicional", vai:"tempo"},
+      {texto:"Prefiro focar na prova mesmo", vai:"prova"}
+    ]
+  },
+
+  tempo:{
+    bot:["Quanto tempo por dia você consegue reservar de verdade?"],
+    opcoes:[
+      {texto:"Umas 2 horas por dia", vai:"plano"},
+      {texto:"1 hora, no máximo", vai:"planoCurto"},
+      {texto:"Só no fim de semana", vai:"planoFds"}
+    ]
+  },
+
+  plano:{
+    bot:[
+      "Fechado. Distribuí os três tópicos em 5 dias, com 2h diárias, deixando o último dia livre para revisão geral:"
+    ],
+    plano:{
+      titulo:"Plano de revisão — Estatística, 5 dias",
+      linhas:[
+        ["Dia 1","Distribuição de frequências: tabelas, classes e regra de Sturges"],
+        ["Dia 2","Exercícios de frequência + construção de histograma"],
+        ["Dia 3","Probabilidade: espaço amostral, eventos e probabilidade condicional"],
+        ["Dia 4","Amostragem: aleatória simples, estratificada e sistemática"],
+        ["Dia 5","Revisão geral com questões antigas e checagem do que ficou fraco"]
+      ]
+    },
+    opcoes:[
+      {texto:"Explica melhor a regra de Sturges", vai:"sturges"},
+      {texto:"Quero um exercício pra testar o Dia 1", vai:"exercicio"},
+      {texto:"O Dia 3 vai ser corrido, ajusta", vai:"ajuste"}
+    ]
+  },
+
+  planoCurto:{
+    bot:[
+      "Com 1h por dia não cabe tudo em 5 dias, então cortei o que é menos cobrado e concentrei no essencial:"
+    ],
+    plano:{
+      titulo:"Plano enxuto — 1h por dia",
+      linhas:[
+        ["Dia 1","Distribuição de frequências (só tabela e classes)"],
+        ["Dia 2","Probabilidade: conceitos base e eventos"],
+        ["Dia 3","Probabilidade condicional com 3 exercícios"],
+        ["Dia 4","Amostragem: diferenças entre os tipos"],
+        ["Dia 5","Simulado curto de 10 questões"]
+      ]
+    },
+    opcoes:[
+      {texto:"O que ficou de fora?", vai:"cortes"},
+      {texto:"Quero um exercício pra testar o Dia 1", vai:"exercicio"}
+    ]
+  },
+
+  planoFds:{
+    bot:[
+      "Dois dias longos exigem blocos e pausas, senão o rendimento cai depois da segunda hora:"
+    ],
+    plano:{
+      titulo:"Plano de fim de semana",
+      linhas:[
+        ["Sábado manhã","Frequências + histograma (2 blocos de 50min)"],
+        ["Sábado tarde","Probabilidade base (2 blocos de 50min)"],
+        ["Domingo manhã","Probabilidade condicional e amostragem"],
+        ["Domingo tarde","Simulado e revisão dos erros"]
+      ]
+    },
+    opcoes:[
+      {texto:"Quero um exercício pra testar", vai:"exercicio"},
+      {texto:"Explica melhor a regra de Sturges", vai:"sturges"}
+    ]
+  },
+
+  cortes:[],  /* preenchido abaixo para evitar repetição */
+
+  sturges:{
+    bot:[
+      "A regra de Sturges estima em quantas classes dividir os dados: k = 1 + 3,322 · log(n), onde n é o número de observações.",
+      "Com 50 dados, por exemplo, dá aproximadamente 6,6 — arredonda para 7 classes. É uma sugestão, não uma obrigação: se o resultado deixar as classes esquisitas, ajuste."
+    ],
+    opcoes:[
+      {texto:"Quero um exercício pra testar", vai:"exercicio"},
+      {texto:"Voltar pro plano", vai:"plano"}
+    ]
+  },
+
+  exercicio:{
+    bot:[
+      "Uma turma tem 40 notas entre 3,0 e 9,5. Quantas classes a regra de Sturges sugere, e qual seria a amplitude de cada uma?",
+      "Tenta antes de ver a resposta — errar aqui vale mais do que errar na prova."
+    ],
+    opcoes:[
+      {texto:"Acho que são 6 classes", vai:"correcao"},
+      {texto:"Não faço ideia, me mostra o caminho", vai:"correcao"}
+    ]
+  },
+
+  correcao:{
+    bot:[
+      "Isso: k = 1 + 3,322 · log(40) ≈ 6,3, então 6 classes. A amplitude total é 9,5 − 3,0 = 6,5; dividido por 6 dá cerca de 1,1 por classe.",
+      "Marquei esse tópico como revisado. Ele volta no plano daqui a 3 dias para fixar."
+    ],
+    opcoes:[
+      {texto:"Voltar pro plano", vai:"plano"},
+      {texto:"Recomeçar a demonstração", vai:"inicio", reiniciar:true}
+    ]
+  },
+
+  ajuste:{
+    bot:[
+      "Movi metade da probabilidade condicional para o Dia 4 e puxei a amostragem para o Dia 5, que era o dia mais leve:"
+    ],
+    plano:{
+      titulo:"Plano ajustado",
+      linhas:[
+        ["Dia 3","Probabilidade: espaço amostral e eventos"],
+        ["Dia 4","Probabilidade condicional + início de amostragem"],
+        ["Dia 5","Amostragem e revisão geral"]
+      ]
+    },
+    opcoes:[
+      {texto:"Agora ficou bom", vai:"fim"},
+      {texto:"Quero um exercício pra testar", vai:"exercicio"}
+    ]
+  },
+
+  fim:{
+    bot:[
+      "Plano salvo. Todo dia de manhã eu te lembro do bloco daquele dia e, no fim, pergunto o que ficou confuso para reencaixar no plano.",
+      "Boa prova."
+    ],
+    opcoes:[
+      {texto:"Recomeçar a demonstração", vai:"inicio", reiniciar:true}
+    ]
+  }
+};
+
+/* Nó de cortes: definido fora do objeto por reaproveitar opções do plano enxuto */
+ROTEIRO.cortes = {
+  bot:[
+    "Deixei de fora histograma desenhado à mão e amostragem por conglomerados — são os dois itens que menos aparecem em prova dessa disciplina.",
+    "Se sobrar tempo no Dia 5, a gente encaixa."
+  ],
+  opcoes:[
+    {texto:"Quero um exercício pra testar", vai:"exercicio"},
+    {texto:"Recomeçar a demonstração", vai:"inicio", reiniciar:true}
+  ]
+};
+
+/* =========================================================================
+   MOTOR DO CHAT
+   ========================================================================= */
+const elChat = document.getElementById('chat');
+const elOpcoes = document.getElementById('opcoes');
+const semMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Cria um balão de mensagem e devolve o elemento. */
+function balao(texto, deQuem){
+  const linha = document.createElement('div');
+  linha.className = 'linha ' + (deQuem === 'eu' ? 'eu' : 'bot');
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.textContent = deQuem === 'eu' ? 'V' : 'R';   // V de "você", R de "Revisa"
+  const bl = document.createElement('div');
+  bl.className = 'balao';
+  bl.innerHTML = '<p>' + texto + '</p>';
+  linha.append(av, bl);
+  elChat.appendChild(linha);
+  rolar();
+  return bl;
+}
+
+/** Monta a tabela do plano de estudo dentro do último balão do assistente. */
+function cartaoPlano(dados, alvo){
+  const box = document.createElement('div');
+  box.className = 'plano';
+  const linhas = dados.linhas
+    .map(l => '<tr><td>' + l[0] + '</td><td>' + l[1] + '</td></tr>')
+    .join('');
+  box.innerHTML = '<h4>' + dados.titulo + '</h4><table><tbody>' + linhas + '</tbody></table>';
+  alvo.appendChild(box);
+  rolar();
+}
+
+/** Mostra os três pontinhos enquanto o assistente "pensa". */
+function digitando(){
+  const linha = document.createElement('div');
+  linha.className = 'linha bot';
+  linha.innerHTML = '<div class="avatar">R</div>' +
+    '<div class="balao digitando"><i></i><i></i><i></i></div>';
+  elChat.appendChild(linha);
+  rolar();
+  return linha;
+}
+
+function rolar(){ elChat.scrollTop = elChat.scrollHeight; }
+function espera(ms){ return new Promise(r => setTimeout(r, semMovimento ? 0 : ms)); }
+
+/** Renderiza os botões de resposta pronta do nó atual. */
+function mostrarOpcoes(opcoes){
+  elOpcoes.innerHTML = '';
+  opcoes.forEach(op => {
+    const b = document.createElement('button');
+    b.textContent = op.texto;
+    if(op.reiniciar) b.className = 'reiniciar';
+    b.addEventListener('click', () => escolher(op));
+    elOpcoes.appendChild(b);
+  });
+}
+
+/** Trata o clique: ecoa a fala do aluno e avança para o próximo nó. */
+async function escolher(op){
+  elOpcoes.innerHTML = '';                 // trava a entrada durante a resposta
+  if(op.reiniciar){ elChat.innerHTML = ''; }
+  else { balao(op.texto, 'eu'); }
+  await irPara(op.vai);
+}
+
+/** Executa um nó: falas do assistente, cartão de plano (se houver) e opções. */
+async function irPara(id){
+  const no = ROTEIRO[id];
+  let ultimoBalao = null;
+
+  for(const fala of no.bot){
+    const pontos = digitando();
+    await espera(700 + fala.length * 8);   // atraso proporcional ao tamanho da fala
+    pontos.remove();
+    ultimoBalao = balao(fala, 'bot');
+    await espera(180);
+  }
+
+  if(no.plano) cartaoPlano(no.plano, ultimoBalao);
+  mostrarOpcoes(no.opcoes);
+}
+
+irPara('inicio');   // abre a conversa ao carregar a página
+</script>
+</body>
+</html>
