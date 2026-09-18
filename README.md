@@ -5,7 +5,7 @@ Assistente de conversa que transforma uma lista de tópicos soltos em um plano d
 Protótipo desenvolvido para a **Atividade Prática — Tópico 13 (Colocando a IA em ação: da ideia à solução)**, na disciplina de Experiência do Usuário.
 Tema escolhido: **apoio aos estudos e aprendizagem**.
 
-**[Abrir o protótipo](https://SEU-USUARIO.github.io/revisa/)** · **[Ver a apresentação](https://SEU-USUARIO.github.io/revisa/slides.html)**
+**[Abrir o protótipo](https://dancodemonkey.github.io/atividade-pratica-experiencia-do-usuario-revisa/)** · **[Ver a apresentação](https://dancodemonkey.github.io/atividade-pratica-experiencia-do-usuario-revisa/slides#1)**
 
 ---
 
